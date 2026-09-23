@@ -157,6 +157,19 @@ Project/
 └── requirements.txt
 ```
 
+## Interview preparation
+
+Technical interview questions and model answers for this project:
+
+- [docs/Multi-Agent-Research-Assistant-Interview-Questions.pdf](docs/Multi-Agent-Research-Assistant-Interview-Questions.pdf)
+
+Regenerate after edits:
+
+```bash
+pip install fpdf2
+python scripts/generate_interview_pdf.py
+```
+
 ## Testing
 
 ```bash
