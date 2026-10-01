@@ -1,6 +1,5 @@
 # Secrets
 .env
-backend/.env
 *.pem
 *.key
 
@@ -12,6 +11,16 @@ __pycache__/
 venv/
 .env.local
 
+# Data & artifacts (keep structure, not large files)
+data/raw/*.csv
+data/processed/
+models/*.joblib
+models/*.pkl
+!models/.gitkeep
+
+# Reference clone
+_reference_fake_job/
+
 # Testing / coverage
 .pytest_cache/
 .coverage
@@ -19,8 +28,6 @@ htmlcov/
 
 # Local databases
 *.db
-research.db
-demo_research.db
 
 # IDE / OS
 .idea/
@@ -30,3 +37,6 @@ Thumbs.db
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Notebooks
+.ipynb_checkpoints/

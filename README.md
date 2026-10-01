@@ -1,175 +1,106 @@
-# Multi-Agent Research Assistant
+# Fake Job Posting Detection
 
-A production-grade autonomous AI research system where specialized agents collaborate to answer complex research questions. Built with FastAPI, LangGraph, LangChain, PostgreSQL, ChromaDB, and Redis.
+Machine learning pipeline to classify online job postings as **legitimate** or **fraudulent**, based on text features from job descriptions and metadata.
+
+This project refactors and productionizes the exploratory workflow from [Fake-job-detection-using-machine-learning](https://github.com/Aakash549/Fake-job-detection-using-machine-learning) into a reproducible, testable layout suitable for portfolio and deployment use.
+
+## Problem
+
+Fraudulent job listings often use vague promises, urgency, and minimal employer detail. The model learns patterns from labeled postings (typically the [Real / Fake Job Posting Prediction](https://www.kaggle.com/datasets/shivamb/real-or-fake-fake-jobposting-prediction) dataset) to flag suspicious listings before candidates apply.
 
 ## Features
 
-- **Multi-Agent Orchestration** — LangGraph-powered workflow with 5 specialized agents
-- **Planner Agent** — Decomposes complex queries into atomic researchable sub-questions
-- **Researcher Agent** — Executes web search via Tavily + RAG retrieval from ChromaDB
-- **Verifier Agent** — Cross-references findings, scores confidence, flags contradictions
-- **Summarizer Agent** — Produces concise summaries with confidence assessments
-- **Writer Agent** — Generates structured markdown reports with inline citations
-- **RAG Pipeline** — Document chunking, embeddings, vector storage, semantic retrieval
-- **Citation Generation** — APA formatting, inline references, verified sources
-- **Export** — Markdown and PDF report download
-- **Mermaid Diagrams** — Auto-generated concept maps and workflow visualizations
-- **Session Memory** — Full persistence of research sessions with PostgreSQL
-- **Streaming** — Real-time SSE progress updates during workflow execution
-- **REST API** — Comprehensive FastAPI endpoints with OpenAPI documentation
-- **Modern Frontend** — Streamlit UI with live workflow visualization
-- **Dockerized** — Full Docker Compose deployment with all dependencies
+- Configurable data path and training hyperparameters
+- Text preprocessing: field merging, lowercasing, English stopword removal
+- Class balancing with random undersampling
+- **Multinomial Naive Bayes** (primary) and **Decision Tree** (baseline) classifiers
+- Saved `joblib` artifacts for batch and interactive inference
+- Streamlit demo UI
+- Unit tests with synthetic samples (no dataset required for CI)
 
-## Architecture
+## Project structure
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    Streamlit Frontend                      │
-│         Query Input | Workflow Viz | Report Display        │
-└──────────────────────┬───────────────────────────────────┘
-                       │ HTTP / SSE
-┌──────────────────────▼───────────────────────────────────┐
-│                   FastAPI Backend                          │
-│  ┌────────────┐  ┌──────────────┐  ┌─────────────────┐   │
-│  │ Research    │  │  Document    │  │  Health          │   │
-│  │ Routes     │  │  Routes      │  │  Routes          │   │
-│  └─────┬──────┘  └──────┬───────┘  └─────────────────┘   │
-│        │                │                                  │
-│  ┌─────▼────────────────▼──────────────────────────────┐  │
-│  │              Service Layer                           │  │
-│  │  ResearchService    DocumentService                  │  │
-│  └─────┬────────────────────────────────────────────┬──┘  │
-│        │                                            │     │
-│  ┌─────▼──────────────────┐  ┌──────────────────────▼──┐  │
-│  │  LangGraph Workflow     │  │    RAG Pipeline          │  │
-│  │  ┌───────┐ ┌─────────┐ │  │  Chunker → Embeddings    │  │
-│  │  │Planner│→│Researcher│ │  │  → VectorStore           │  │
-│  │  └───────┘ └────┬────┘ │  │  → Retriever              │  │
-│  │           ┌─────▼────┐ │  └──────────────┬────────────┘  │
-│  │           │ Verifier  │ │                │               │
-│  │           └─────┬────┘ │                │               │
-│  │           ┌─────▼────┐ │                │               │
-│  │           │Summarizer│ │                │               │
-│  │           └─────┬────┘ │                │               │
-│  │           ┌─────▼────┐ │                │               │
-│  │           │  Writer   │ │                │               │
-│  │           └──────────┘ │                │               │
-│  └────────────────────────┘                │               │
-│                                            │               │
-│  ┌─────────────────┐ ┌──────────┐ ┌────────▼────────┐     │
-│  │   PostgreSQL     │ │  Redis   │ │   ChromaDB       │     │
-│  │   (Sessions)     │ │  (Cache) │ │   (Vectors)      │     │
-│  └─────────────────┘ └──────────┘ └─────────────────┘     │
-└──────────────────────────────────────────────────────────┘
+├── app/                    # Streamlit inference UI
+├── data/raw/               # Place dataset CSV here (not committed)
+├── models/                 # Trained vectorizer + classifiers
+├── scripts/                # CLI entry points
+├── src/fake_job_detector/  # Library code
+└── tests/
 ```
 
-## Prerequisites
+## Dataset
 
-- Python 3.12+
-- Docker & Docker Compose
-- OpenAI API key
-- Tavily API key
+1. Download `fake_job_posting.csv` from [Kaggle](https://www.kaggle.com/datasets/shivamb/real-or-fake-fake-jobposting-prediction).
+2. Save it as:
 
-## Quick Start
+   `data/raw/fake_job_postings.csv`
 
-### Using Docker (recommended)
+The loader also accepts the legacy filename `DataSet.csv` if you already have a local copy.
+
+## Requirements
+
+- Python 3.10+
+- See [requirements.txt](requirements.txt)
 
 ```bash
-# Clone and navigate to the project
-cd Project
-
-# Copy and edit environment variables
-cp backend/.env.example backend/.env
-# Edit backend/.env with your API keys
-
-# Start all services
-docker-compose up -d
-
-# Open the application
-# Frontend: http://localhost:8501
-# API docs: http://localhost:8000/docs
-```
-
-### Local Development
-
-```bash
-# Install dependencies
+python -m venv .venv
+.venv\Scripts\activate          # Windows
 pip install -r requirements.txt
-
-# Set up environment variables
-cp backend/.env.example backend/.env
-# Edit backend/.env with your API keys
-
-# Start infrastructure (PostgreSQL, Redis, ChromaDB)
-docker-compose up -d postgres redis chroma
-
-# Run the backend
-make dev
-
-# In a separate terminal, run the frontend
-make frontend
+python -c "import nltk; nltk.download('stopwords')"
 ```
 
-## API Documentation
-
-Interactive API docs are available at `http://localhost:8000/docs` when running in development mode.
-
-See [docs/API.md](docs/API.md) for the full endpoint reference.
-
-## Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENAI_API_KEY` | — | OpenAI API key (required) |
-| `OPENAI_MODEL` | `gpt-4o` | OpenAI model to use |
-| `TAVILY_API_KEY` | — | Tavily search API key (required) |
-| `DATABASE_URL` | `postgresql+asyncpg://...` | PostgreSQL connection string |
-| `REDIS_URL` | `redis://localhost:6379/0` | Redis connection URL |
-| `CHROMA_HOST` | `localhost` | ChromaDB host |
-| `CHROMA_PORT` | `8000` | ChromaDB port |
-| `LOG_LEVEL` | `INFO` | Logging level |
-| `ENVIRONMENT` | `development` | Runtime environment |
-| `CHUNK_SIZE` | `1000` | Document chunk size for RAG |
-| `CHUNK_OVERLAP` | `200` | Chunk overlap for RAG |
-
-## Project Structure
-
-```
-Project/
-├── backend/
-│   ├── agents/          # AI agent implementations
-│   ├── api/             # FastAPI routes and middleware
-│   ├── core/            # Config, logging, exceptions, DI
-│   ├── models/          # SQLAlchemy ORM + LangGraph state
-│   ├── rag/             # RAG pipeline (chunking, embeddings, retrieval)
-│   ├── repositories/    # Data access layer (repository pattern)
-│   ├── schemas/         # Pydantic request/response schemas
-│   ├── services/        # Business logic orchestration
-│   ├── tools/           # Search, citations, export, diagrams
-│   ├── utils/           # Helper utilities
-│   ├── workflows/       # LangGraph workflow definitions
-│   └── tests/           # Unit and integration tests
-├── frontend/            # Streamlit UI
-├── docker/              # Dockerfiles
-├── docs/                # Architecture and API documentation
-├── docker-compose.yml
-├── Makefile
-└── requirements.txt
-```
-
-## Testing
+## Train
 
 ```bash
-# Run all tests
-make test
-
-# Unit tests only
-make test-unit
-
-# Integration tests only
-make test-integration
+python scripts/train.py --data-path data/raw/fake_job_postings.csv
 ```
+
+Artifacts are written to `models/`:
+
+- `vectorizer.joblib`
+- `naive_bayes.joblib`
+- `decision_tree.joblib`
+- `metrics.json`
+
+## Predict (CLI)
+
+```bash
+python scripts/predict.py --text "Earn $5000 weekly from home. No experience required!"
+```
+
+Or pipe text:
+
+```bash
+echo "Software engineer with Python experience." | python scripts/predict.py
+```
+
+## Demo app
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+## Tests
+
+```bash
+pytest
+```
+
+## Methodology (summary)
+
+| Step | Description |
+|------|-------------|
+| Cleaning | Drop high-null / ID columns; fill missing text with spaces |
+| Features | Concatenate title, location, company profile, description, requirements, benefits, industry |
+| Balance | `RandomUnderSampler` on the training split |
+| Vectorization | Bag-of-words (`CountVectorizer`) |
+| Models | Multinomial NB and Decision Tree; metrics on held-out test set |
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).
+
+## Acknowledgments
+
+Original exploratory analysis: [Aakash549/Fake-job-detection-using-machine-learning](https://github.com/Aakash549/Fake-job-detection-using-machine-learning).
